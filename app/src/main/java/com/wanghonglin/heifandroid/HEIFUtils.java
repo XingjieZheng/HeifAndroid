@@ -45,9 +45,10 @@ public class HEIFUtils {
 
     /**
      * Encode YUV data to HEIF
-     * @param yuvBytes yuv bytes
-     * @param width width
-     * @param height height
+     *
+     * @param yuvBytes   yuv bytes
+     * @param width      width
+     * @param height     height
      * @param outputPath output path
      * @return true if success
      */
@@ -57,7 +58,8 @@ public class HEIFUtils {
 
     /**
      * Encode bitmap to HEIF
-     * @param bitmap source bitmap
+     *
+     * @param bitmap     source bitmap
      * @param outputPath output heif path
      * @return true if success
      */
@@ -73,6 +75,7 @@ public class HEIFUtils {
 
     /**
      * Decode a heif to bitmap
+     *
      * @param heifFilePath source file path
      * @return a decoded bitmap or null if the provided file path is invalid
      */
@@ -91,7 +94,8 @@ public class HEIFUtils {
 
     /**
      * Get byte content of an asset name
-     * @param context the application context
+     *
+     * @param context   the application context
      * @param assetName asset name
      * @return byte array represent the content of asset
      */
@@ -122,7 +126,8 @@ public class HEIFUtils {
 
     /**
      * Retrieve an accessible path of an asset name
-     * @param context the application context
+     *
+     * @param context   the application context
      * @param assetName asset name
      * @return an absolute path inside app private storage
      */
@@ -172,5 +177,47 @@ public class HEIFUtils {
         }
 
         return null;
+    }
+
+    /**
+     * convert a heif to jpg
+     *
+     * @param heifFilePath source file path
+     * @param jpegPath     result file path
+     */
+    public static boolean convertHEIFToJPEG(String heifFilePath, String jpegPath) {
+        Bitmap bitmap = decodeHEIFToBitmap(heifFilePath);
+        FileOutputStream out = null;
+        try {
+            if (bitmap == null || bitmap.isRecycled()) {
+                return false;
+            }
+            File file = new File(jpegPath);
+            if (file.exists()) {
+                file.delete();
+            }
+            boolean isNewFileSuccess = file.createNewFile();
+            if (!isNewFileSuccess) {
+                return false;
+            }
+            out = new FileOutputStream(file);
+            return bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (out != null) {
+                try {
+                    out.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return false;
     }
 }

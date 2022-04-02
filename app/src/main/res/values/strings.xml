@@ -4,4 +4,5 @@
     <string name="heif_decode">Decode to Bitmap</string>
     <string name="use_res_from_assets">Use HEIF from assets</string>
     <string name="heif_yuv_encode">Encode YUV to HEIF</string>
+    <string name="heif_2_jpeg">CONVERT HEIF TO JPEG</string>
 </resources>

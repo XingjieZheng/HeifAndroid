@@ -50,10 +50,14 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE_ENCODE = 224;
     private static final int PERMISSION_REQUEST_CODE_DECODE = 301;
     private static final int PERMISSION_REQUEST_CODE_ENCODE_YUV = 502;
+    private static final int PERMISSION_REQUEST_CODE_NEW_FILE_PATH = 601;
+
 
     private static final String TAG = "MainActivity";
-    private static final String ENCODE_OUTPUT_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() +
-            File.separator + "output.heic";
+    private static final String OUTPUT_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() +
+            File.separator + "heif";
+    private static final String ENCODE_OUTPUT_PATH = OUTPUT_PATH + File.separator + "output.heic";
+    private static final String CONVERT_HEIF_2_JPEG_OUTPUT_PATH = OUTPUT_PATH + File.separator + "heif2jpeg.jpg";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,7 +98,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        findViewById(R.id.heif_2_jpeg).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (canAcquireReadWriteStoragePermission(PERMISSION_REQUEST_CODE_ENCODE_YUV)) {
+                    HEIF2JPEGTask.fire(MainActivity.this);
+                }
+            }
+        });
+
+        if (canAcquireReadWriteStoragePermission(PERMISSION_REQUEST_CODE_NEW_FILE_PATH)) {
+            newFilePath();
+        }
     }
+
 
     private boolean canAcquireReadWriteStoragePermission(int requestCode) {
         if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -214,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
 
                 final String imageInfo = "File size: " + new File(ENCODE_OUTPUT_PATH).length() / 1024 + "KB\n" +
                         "width=" + bitmap.getWidth() + ", height=" + bitmap.getHeight() + "\n" +
-                        "decode timeMillis=" + (System.currentTimeMillis()-startTimeMillis) + "\n";
+                        "decode timeMillis=" + (System.currentTimeMillis() - startTimeMillis) + "\n";
 
                 textView.setText(imageInfo);
                 textView.setTextColor(Color.WHITE);
@@ -226,7 +244,47 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private static boolean USE_HEIF_FILE_FROM_ASSETS = false;
+    private static class HEIF2JPEGTask extends AsyncTask<Void, Void, Boolean> {
+
+        private final WeakReference<MainActivity> activity;
+
+        public static void fire(MainActivity activity) {
+            new HEIF2JPEGTask(activity).execute();
+        }
+
+        private HEIF2JPEGTask(MainActivity activity) {
+            this.activity = new WeakReference<>(activity);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            if (activity.get() != null) {
+                activity.get().showProgress();
+            }
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... voids) {
+            return HEIFUtils.convertHEIFToJPEG(USE_HEIF_FILE_FROM_ASSETS
+                            ? HEIFUtils.accessiblePathOfAssetName(activity.get(), "input.heic")
+                            : ENCODE_OUTPUT_PATH,
+                    CONVERT_HEIF_2_JPEG_OUTPUT_PATH);
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            super.onPostExecute(result);
+            if (activity.get() != null) {
+                activity.get().hideProgress();
+            }
+            Toast.makeText(activity.get(), "convert HEIF to JPEG,"
+                            + (result ? ("success, write to " + CONVERT_HEIF_2_JPEG_OUTPUT_PATH + ".") : "fail."),
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private static boolean USE_HEIF_FILE_FROM_ASSETS = true;
 
     private void showProgress() {
         findViewById(R.id.progress_bar).setVisibility(View.VISIBLE);
@@ -268,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
             super.onPostExecute(aLong);
             if (context.get() != null) {
                 context.get().hideProgress();
-                Toast.makeText(context.get(), "Encode done, took " + (aLong-startTime) + " " + ENCODE_OUTPUT_PATH, Toast.LENGTH_LONG)
+                Toast.makeText(context.get(), "Encode done, took " + (aLong - startTime) + " " + ENCODE_OUTPUT_PATH, Toast.LENGTH_LONG)
                         .show();
             }
             if (bitmap != null && !bitmap.isRecycled()) {
@@ -292,6 +350,17 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == PERMISSION_REQUEST_CODE_ENCODE_YUV && grantResults[0] == PermissionChecker.PERMISSION_GRANTED) {
             YUVToHEIFTask.fire(this);
+        }
+
+        if (requestCode == PERMISSION_REQUEST_CODE_NEW_FILE_PATH && grantResults[0] == PermissionChecker.PERMISSION_GRANTED) {
+            newFilePath();
+        }
+    }
+
+    private void newFilePath() {
+        File file = new File(OUTPUT_PATH);
+        if (!file.exists()) {
+            file.mkdirs();
         }
     }
 }
